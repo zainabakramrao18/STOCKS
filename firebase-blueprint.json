@@ -1,0 +1,181 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "An inventory item tracked by the shop owner",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique product ID"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Owner user ID matching request.auth.uid"
+        },
+        "name": {
+          "type": "string",
+          "description": "Product display name",
+          "maxLength": 150
+        },
+        "category": {
+          "type": "string",
+          "description": "Product category",
+          "maxLength": 60
+        },
+        "sku": {
+          "type": "string",
+          "description": "Optional SKU or barcode identifier",
+          "maxLength": 50
+        },
+        "quantity": {
+          "type": "number",
+          "description": "Current on-hand stock count"
+        },
+        "costPrice": {
+          "type": "number",
+          "description": "Purchase cost per unit"
+        },
+        "sellingPrice": {
+          "type": "number",
+          "description": "Retail price per unit"
+        },
+        "reorderLevel": {
+          "type": "number",
+          "description": "Threshold at which item is flagged as low stock"
+        },
+        "expiryDate": {
+          "type": "string",
+          "description": "Expiry date in ISO format (YYYY-MM-DD) or empty string",
+          "maxLength": 30
+        },
+        "notes": {
+          "type": "string",
+          "description": "Additional notes about the product",
+          "maxLength": 500
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Creation timestamp in ISO format"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Last updated timestamp in ISO format"
+        }
+      },
+      "required": ["userId", "name", "category", "quantity", "costPrice", "sellingPrice", "reorderLevel"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Record of a sale or inventory restock",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique transaction ID"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Owner user ID matching request.auth.uid"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["sale", "restock"],
+          "description": "Whether this transaction was a sale or restock"
+        },
+        "productId": {
+          "type": "string",
+          "description": "Referenced product ID",
+          "maxLength": 128
+        },
+        "productName": {
+          "type": "string",
+          "description": "Product name at time of transaction",
+          "maxLength": 150
+        },
+        "quantity": {
+          "type": "number",
+          "description": "Quantity sold or restocked"
+        },
+        "unitPrice": {
+          "type": "number",
+          "description": "Unit price applied"
+        },
+        "totalAmount": {
+          "type": "number",
+          "description": "Total revenue (sale) or cost (restock)"
+        },
+        "profit": {
+          "type": "number",
+          "description": "Estimated gross profit on sales"
+        },
+        "previousStock": {
+          "type": "number",
+          "description": "Stock count before this transaction"
+        },
+        "newStock": {
+          "type": "number",
+          "description": "Stock count after this transaction"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional transaction note (buyer, vendor, etc.)",
+          "maxLength": 300
+        },
+        "date": {
+          "type": "string",
+          "description": "Transaction date/time string"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Creation timestamp in ISO format"
+        }
+      },
+      "required": ["userId", "type", "productId", "productName", "quantity", "unitPrice", "totalAmount", "previousStock", "newStock", "date"]
+    },
+    "UserSettings": {
+      "title": "UserSettings",
+      "description": "Preferences for the shop owner",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner user ID matching request.auth.uid"
+        },
+        "shopName": {
+          "type": "string",
+          "description": "Name of the small shop",
+          "maxLength": 100
+        },
+        "currency": {
+          "type": "string",
+          "description": "Currency code or symbol",
+          "maxLength": 10
+        },
+        "lowStockThresholdDefault": {
+          "type": "number",
+          "description": "Default reorder level for new items"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Last updated timestamp"
+        }
+      },
+      "required": ["userId", "shopName", "currency"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/products/{productId}": {
+      "schema": "Product",
+      "description": "User's store products and inventory levels"
+    },
+    "/users/{userId}/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "User's sales and restock ledger log"
+    },
+    "/users/{userId}/settings/{settingId}": {
+      "schema": "UserSettings",
+      "description": "User's store configurations and defaults"
+    }
+  }
+}

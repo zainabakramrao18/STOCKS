@@ -1,0 +1,102 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Primitive validation helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Mandatory connection test endpoint for client initialization verification
+    match /test/connection {
+      allow get: if true;
+    }
+
+    // Product schema validation
+    function isValidProduct(data, userId) {
+      return data.userId == userId &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 150 &&
+        data.category is string && data.category.size() > 0 && data.category.size() <= 60 &&
+        data.quantity is number && data.quantity >= 0 &&
+        data.costPrice is number && data.costPrice >= 0 &&
+        data.sellingPrice is number && data.sellingPrice >= 0 &&
+        data.reorderLevel is number && data.reorderLevel >= 0 &&
+        (!('sku' in data) || (data.sku is string && data.sku.size() <= 50)) &&
+        (!('expiryDate' in data) || (data.expiryDate is string && data.expiryDate.size() <= 30)) &&
+        (!('notes' in data) || (data.notes is string && data.notes.size() <= 500));
+    }
+
+    // Transaction schema validation (Sales & Restocks)
+    function isValidTransaction(data, userId) {
+      return data.userId == userId &&
+        (data.type == 'sale' || data.type == 'restock') &&
+        data.productId is string && data.productId.size() > 0 && data.productId.size() <= 128 &&
+        data.productName is string && data.productName.size() > 0 && data.productName.size() <= 150 &&
+        data.quantity is number && data.quantity > 0 &&
+        data.unitPrice is number && data.unitPrice >= 0 &&
+        data.totalAmount is number && data.totalAmount >= 0 &&
+        data.previousStock is number && data.previousStock >= 0 &&
+        data.newStock is number && data.newStock >= 0 &&
+        data.date is string && data.date.size() > 0 && data.date.size() <= 50 &&
+        (!('profit' in data) || (data.profit is number)) &&
+        (!('notes' in data) || (data.notes is string && data.notes.size() <= 300));
+    }
+
+    // User settings schema validation
+    function isValidSettings(data, userId) {
+      return data.userId == userId &&
+        data.shopName is string && data.shopName.size() > 0 && data.shopName.size() <= 100 &&
+        data.currency is string && data.currency.size() > 0 && data.currency.size() <= 10 &&
+        (!('lowStockThresholdDefault' in data) || (data.lowStockThresholdDefault is number && data.lowStockThresholdDefault >= 0));
+    }
+
+    // User-scoped subcollections
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create, update: if isOwner(userId);
+
+      // Products collection
+      match /products/{productId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(productId) && isValidProduct(incoming(), userId);
+        allow update: if isOwner(userId) && isValidId(productId) && isValidProduct(incoming(), userId) && incoming().userId == existing().userId;
+        allow delete: if isOwner(userId) && isValidId(productId);
+      }
+
+      // Transactions collection (append-only ledger)
+      match /transactions/{transactionId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(transactionId) && isValidTransaction(incoming(), userId);
+        allow update, delete: if false;
+      }
+
+      // Settings collection
+      match /settings/{settingId} {
+        allow get, list: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidId(settingId) && isValidSettings(incoming(), userId);
+        allow delete: if false;
+      }
+    }
+  }
+}

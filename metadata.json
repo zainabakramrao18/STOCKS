@@ -1,0 +1,6 @@
+{
+  "name": "StockWise - Small Business Inventory & Sales Tracker",
+  "description": "Inventory management, sales, restocks, expiry tracking, and CSV import/export for small shop owners.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
